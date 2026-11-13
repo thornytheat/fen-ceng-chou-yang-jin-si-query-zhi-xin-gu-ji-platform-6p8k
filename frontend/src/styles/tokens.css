@@ -1,0 +1,47 @@
+/* sampleaqp 设计令牌：实验室「抽样与量具」。
+   浅灰蓝方格记录纸 + 黄铜刻度 + 样品瓶编号；全部 oklch，禁纯黑纯白。 */
+:root {
+  /* 纸与背板 */
+  --paper: oklch(0.963 0.008 240);
+  --paper-2: oklch(0.939 0.011 240);
+  --paper-3: oklch(0.908 0.016 238);
+  --panel: oklch(0.986 0.004 235);
+  --panel-2: oklch(0.972 0.006 238);
+
+  /* 墨色 */
+  --ink: oklch(0.255 0.022 248);
+  --ink-soft: oklch(0.435 0.021 248);
+  --ink-faint: oklch(0.628 0.017 248);
+  --rule: oklch(0.812 0.016 240);
+  --rule-strong: oklch(0.702 0.027 240);
+
+  /* 黄铜与钢 */
+  --brass: oklch(0.682 0.116 82);
+  --brass-deep: oklch(0.505 0.099 78);
+  --brass-soft: oklch(0.905 0.049 88);
+  --steel: oklch(0.535 0.052 243);
+  --steel-soft: oklch(0.86 0.024 243);
+
+  /* 状态 */
+  --pass: oklch(0.523 0.088 166);
+  --pass-soft: oklch(0.918 0.032 166);
+  --fail: oklch(0.545 0.155 27);
+  --fail-soft: oklch(0.925 0.036 27);
+  --warn: oklch(0.66 0.11 68);
+
+  /* 分层色阶：钢蓝 / 黄铜 / 苔绿 / 赭石 / 冷灰紫（低饱和） */
+  --stratum-1: oklch(0.55 0.062 244);
+  --stratum-2: oklch(0.66 0.108 82);
+  --stratum-3: oklch(0.56 0.072 168);
+  --stratum-4: oklch(0.575 0.086 52);
+  --stratum-5: oklch(0.545 0.052 300);
+
+  --font-body: 'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', sans-serif;
+  --font-mono: 'Spline Sans Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+  --pad: clamp(16px, 2.1vw, 30px);
+  --rail-w: 216px;
+  --radius: 3px;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --shadow-panel: 0 1px 0 oklch(0.885 0.01 240), 0 18px 36px -30px oklch(0.32 0.02 248 / 0.45);
+}
