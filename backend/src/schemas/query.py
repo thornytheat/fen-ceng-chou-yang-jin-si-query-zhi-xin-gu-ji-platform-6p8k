@@ -23,6 +23,33 @@ class StratumContributionOut(BaseModel):
     verified: bool
 
 
+class CompositionRowOut(BaseModel):
+    code: str
+    label: str
+    sample_size: int
+    point_share_pct: float
+    point_share_raw_pct: float
+    std_error_pct: float
+    marginal_half_pct: float
+    joint_half_pct: float
+    joint_low_pct: float
+    joint_high_pct: float
+    interval_clipped: bool
+
+
+class CompositionOut(BaseModel):
+    publishable: bool
+    confidence: float
+    family_size: int
+    z_marginal: float
+    z_joint: float
+    method: str
+    min_stratum_sample: int
+    point_total_pct: float
+    rows: list[CompositionRowOut]
+    reasons: list[str]
+
+
 class QueryOut(BaseModel):
     id: int
     code: str
@@ -50,5 +77,6 @@ class QueryOut(BaseModel):
     run_by: str
     created_at: str
     strata_detail: list[StratumContributionOut]
+    composition: CompositionOut | None = None
     qc_id: int | None = None
     qc_verdict: str | None = None

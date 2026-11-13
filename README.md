@@ -32,9 +32,9 @@
 
 1. **数据集概览**：三份数据集（GMV / 时效 / 成本）× 5 个线路层，展示 N_h、层占比、先验 S_h、层均值、精度标准；admin 可校准精度标准、投递后台「全量基线刷新」。
 2. **抽样方案编辑**：输入置信度 + 目标误差 → 后端算法给出总样本量、每层 n_h、Neyman 权重、预计 CI、层容量约束；草稿须 admin 审批。
-3. **近似查询**：按方案抽行 → HT 点估计 + 有限总体校正方差 + 95% CI，并现场执行同口径全量聚合做对照；输出各层贡献、方差占比、耗时与提速。
-4. **精度自检**：相对误差 / CI 宽度 / 层最小样本 / 覆盖率 / 提速比五项检查，给出达标结论；三角色复核链（分析师提交 → 负责人复核 → 业务方知悉）完成后可导出。
-5. **导出估算说明 Markdown**：含方案参数、点估计与 CI、全量真值对照、各层贡献表、检查项与复核链。
+3. **近似查询**：按方案抽行 → HT 点估计 + 有限总体校正方差 + 95% CI，并现场执行同口径全量聚合做对照；输出各层贡献、方差占比、耗时与提速；同一批共享样本再合成**线路运费占比与联合误差边界**（算法 3）。
+4. **精度自检**：相对误差 / CI 宽度 / 层最小样本 / 覆盖率 / 提速比 / 线路占比可发布性六项检查（覆盖率为参考项），给出达标结论；三角色复核链（分析师提交 → 负责人复核 → 业务方知悉）完成后可导出。
+5. **导出估算说明 Markdown**：含方案参数、点估计与 CI、全量真值对照、各层贡献表、线路占比与 Bonferroni 联合区间、检查项与复核链；占比未通过发布闸门时导出物同步拒绝发布并写明原因。
 
 ## 4. 算法（后端 Python 真算，前端只展示）
 
@@ -62,11 +62,27 @@ CI      = Ŷ ± z·√V,   相对误差 = z·√V / Ŷ
 - 与全量真值对比：真值由同一数据集、同一过滤范围的 `SUM(value_minor)` **真实聚合**得出，不是写死的对照值。
 - 抽样确定性：明细行在 seed 时写入 64bit 混合哈希 `sample_rank`，查询按 `(dataset_id, stratum_code, sample_rank)` 取每层最小的 n_h 行 —— 同一方案 + 同一数据集永远得到同样样本，可复现、可复核。
 
+### 算法 3：线路占比合成与联合误差边界（`backend/src/services/composition_service.py`）
+
+经营会要看各线路在运费总额中的占比，且多线路要能同时比较。占比不复用「各层金额区间硬拼」（会出现负数或合计超 100%），而是在**算法 2 的同一批共享样本**上做 Delta 方法线性化：
+
+```
+p_h       = Ŷ_h / Ŷ                                 （占比点估计，最大余数法归一 → 合计恰为 100.00%）
+Var(p_h)  = (V_h − 2·p_h·V_h + p_h²·V) / Ŷ²         （V_h=层 HT 方差，V=Σ V_h；Cov(Ŷ_h,Ŷ)=V_h）
+单线路边缘区间  p_h ± z(1−α/2)·SE(p_h)              （仅参考，不能跨线路同时下结论）
+联合区间        p_h ± z(1−α/(2H))·SE(p_h)           （Bonferroni，family-wise 同时覆盖 H 条线路）
+```
+
+- 联合边界保证**同一组区间以 1−α 的 family-wise 置信水平同时覆盖全部 H 条线路**的真实占比，可直接用于多线路比较；`H=1` 时退化为普通双侧区间。
+- 区间在原始精度上计算后裁剪到 `[0,100]`，裁剪会显式标注，绝不输出负数或 >100%。
+- **发布闸门（硬拒绝）**：任一层 `n_h < 最小层样本（默认 30）`（含 0/1 条无法估计方差）、HT 告警缺层、或总额点估计非正时，`publishable=false`、不输出任何占比数字并给出拒绝原因。页面（查询页/自检页共用 `CompositionPanel`）、精度自检（`share_publishable` 阻断项）、导出 Markdown 三处读取同一份落库 `composition` JSON，口径完全一致。
+
 ### 失败态
 
 - 数据集无明细行 → `DATASET_EMPTY`（422），前端给可恢复空态。
 - 方案未审批就查询 → `PLAN_NOT_ACTIVE`（409）。
 - 层容量不足 / 先验 S_h 缺失 → 返回 `capacity_warning`，算法降级但不静默。
+- 占比发布闸门未过（层样本不足/缺层/总额非正）→ 查询仍返回金额估计，但 `composition.publishable=false` 且不发布占比，自检判未达标、导出物同步拒绝并写明原因。
 - 复核链顺序错误 / 角色不符 → `QC_ORDER` / `FORBIDDEN`（409 / 403）。
 
 ## 5. 快速启动
@@ -126,7 +142,7 @@ gb-583/
 │       ├── constants/          # roles / enums / limits / error_codes
 │       ├── models/             # user / dataset / waybill / sample_plan / approx_query / qc_check / audit
 │       ├── schemas/            # auth / dataset / plan / query / qc / common
-│       ├── services/           # sampling / estimation / dataset / plan / query / qc / export / audit / auth
+│       ├── services/           # sampling / estimation / composition / dataset / plan / query / qc / export / audit / auth
 │       ├── controllers/        # 薄控制器
 │       ├── routes/             # /api/*（health/auth/datasets/plans/queries/qc/audit）
 │       ├── middlewares/        # auth / rbac / rate_limit / audit_logger / error_handler
@@ -139,7 +155,7 @@ gb-583/
         ├── api/                # client / auth / datasets / plans / queries / qc / health
         ├── stores/             # auth / ui / dataset / plan / query / qc
         ├── types/              # models.ts
-        ├── components/common/  # StatTile / RulerBar / StratumChart / CiPlot / RangeBar / VerdictPill / VialTag / EmptyState / Toasts
+        ├── components/common/  # StatTile / RulerBar / StratumChart / CiPlot / CompositionPanel / RangeBar / VerdictPill / VialTag / EmptyState / Toasts
         ├── components/layout/  # AppShell
         ├── hooks/              # useStore / useAsync / useToast
         ├── pages/              # Login / Datasets / Plans / Queries / Qc
@@ -180,7 +196,7 @@ gb-583/
 | `Role`（admin/analyst/viewer） | `backend/src/constants/roles.py` | `frontend/src/constants/roles.ts` + `types/models.ts` |
 | `AllocationMethod` / `PlanStatus` / `QueryStatus` | `backend/src/constants/enums.py` | `frontend/src/constants/enums.ts` |
 | `QcVerdict` / `ReviewState` / `SignoffStage` | `backend/src/constants/enums.py` | `frontend/src/constants/enums.ts` + `pages/Qc.tsx` |
-| `CheckCode`（五项检查） | `backend/src/constants/enums.py` | `frontend/src/constants/enums.ts`（`CHECK_HINTS`） |
+| `CheckCode`（六项检查，覆盖率为参考项） | `backend/src/constants/enums.py` | `frontend/src/constants/enums.ts`（`CHECK_HINTS`） |
 
 ## 12. License
 

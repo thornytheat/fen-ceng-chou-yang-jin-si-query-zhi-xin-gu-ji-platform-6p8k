@@ -109,6 +109,7 @@ CREATE TABLE IF NOT EXISTS approx_queries (
   truth_total_minor BIGINT NOT NULL,
   truth_rel_error_pct DECIMAL(7,4) NOT NULL,
   strata_detail JSON NOT NULL,
+  composition JSON NULL,
   sample_ms DECIMAL(10,2) NOT NULL,
   truth_ms DECIMAL(10,2) NOT NULL,
   full_scan_baseline_ms INT NOT NULL,

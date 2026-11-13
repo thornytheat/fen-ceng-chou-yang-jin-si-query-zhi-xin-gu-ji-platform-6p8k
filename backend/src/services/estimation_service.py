@@ -77,7 +77,7 @@ def ht_estimate(
         row["contribution_share_pct"] = round(row["contribution"] / total_estimate * 100, 4) if total_estimate else 0.0
         row["variance_share_pct"] = round(row["variance"] / total_var * 100, 4) if total_var else 0.0
         row["ci_half_pct"] = round(row["ci_half"] / total_estimate * 100, 4) if total_estimate else 0.0
-        row.pop("variance")
+        # variance 保留给算法 3（占比合成的 Delta 方差），不进落库 JSON
 
     return {
         "z": round(z, 4),
@@ -88,6 +88,7 @@ def ht_estimate(
         "ci_half_minor": ci_half,
         "rel_error_pct": round(rel_error, 4),
         "sample_size": sum(r["sample_size"] for r in rows),
+        "total_variance": total_var,
         "strata": rows,
         "warnings": warnings,
     }

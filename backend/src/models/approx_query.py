@@ -30,6 +30,7 @@ class ApproxQuery(Base):
     truth_total_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
     truth_rel_error_pct: Mapped[Decimal] = mapped_column(DECIMAL(7, 4), nullable=False)
     strata_detail: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False)
+    composition: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     sample_ms: Mapped[Decimal] = mapped_column(DECIMAL(10, 2), nullable=False)
     truth_ms: Mapped[Decimal] = mapped_column(DECIMAL(10, 2), nullable=False)
     full_scan_baseline_ms: Mapped[int] = mapped_column(Integer, nullable=False)

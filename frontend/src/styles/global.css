@@ -2046,3 +2046,95 @@ figcaption {
     flex-wrap: wrap;
   }
 }
+
+/* ---------- 线路占比与联合误差边界（算法 3） ---------- */
+.composition-panel {
+  margin: 18px 0;
+}
+
+.composition-badge {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  padding: 4px 10px;
+  border-radius: var(--radius);
+  white-space: nowrap;
+}
+
+.composition-badge.is-ok {
+  color: var(--pass);
+  background: var(--pass-soft);
+  border: 1px solid color-mix(in oklch, var(--pass) 35%, transparent);
+}
+
+.composition-badge.is-bad {
+  color: var(--fail);
+  background: var(--fail-soft);
+  border: 1px solid color-mix(in oklch, var(--fail) 35%, transparent);
+}
+
+.composition-stack {
+  display: flex;
+  width: 100%;
+  height: 34px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--paper-2);
+  margin: 6px 0 10px;
+}
+
+.composition-segment {
+  height: 100%;
+  min-width: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: filter var(--ease);
+}
+
+.composition-segment:hover {
+  filter: brightness(1.08);
+}
+
+.composition-segment-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--panel);
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
+}
+
+.composition-method {
+  margin: 4px 0 12px;
+  line-height: 1.7;
+}
+
+.composition-clip-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  font-size: 0.62rem;
+  font-family: var(--font-mono);
+  color: var(--brass-deep);
+  background: var(--brass-soft);
+  border-radius: var(--radius);
+}
+
+.composition-blocked {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px;
+  border-left: 3px solid var(--fail);
+  background: oklch(0.972 0.012 27);
+  border-radius: var(--radius);
+}
+
+.composition-reasons {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  line-height: 1.8;
+}

@@ -13,6 +13,7 @@ import RulerBar from '../components/common/RulerBar';
 import StatTile from '../components/common/StatTile';
 import EmptyState from '../components/common/EmptyState';
 import VialTag from '../components/common/VialTag';
+import CompositionPanel from '../components/common/CompositionPanel';
 import { formatInt, formatMetric, formatPct } from '../utils/format';
 
 const STAGE_ROLE: Record<string, string> = {
@@ -45,6 +46,11 @@ export default function Qc() {
   const selected = state.selected;
   const target = selected?.target_pct ?? 2;
   const unitScale = selected?.unit === '元' ? 100 : 10;
+  // 自检详情可能来自列表里另一条 QC：占比面板按 QC 关联的 query_id 取同源结果
+  const compositionQuery = useMemo(
+    () => queries.items.find((item) => item.id === selected?.query_id) ?? query,
+    [queries.items, selected?.query_id, query],
+  );
 
   const run = useAsync(async () => {
     if (!queryId) return null;
@@ -207,6 +213,8 @@ export default function Qc() {
                 <RulerBar value={selected.rel_error_pct} target={selected.target_pct} caption="点估计相对误差 vs 精度标准" />
                 <RulerBar value={selected.ci_pct} target={selected.target_pct} caption="95% CI 半宽 vs 精度标准" />
               </div>
+
+              <CompositionPanel composition={compositionQuery?.composition ?? null} />
 
               <h4 className="section-title">检查项</h4>
               <div className="check-list">

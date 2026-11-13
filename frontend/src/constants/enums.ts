@@ -37,6 +37,7 @@ export const CHECK_HINTS: Record<string, string> = {
   min_stratum_sample: '每层样本量不低于 30 行',
   sampling_coverage: '样本量 / 层容量，仅作参考',
   speed_vs_full_scan: '抽样耗时相对生产全量基线',
+  share_publishable: '线路占比能否发布：每层样本达标且联合误差边界可同时覆盖各线路比较',
 };
 
 export const CONFIDENCE_OPTIONS = [0.8, 0.9, 0.95, 0.99];

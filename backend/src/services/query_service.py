@@ -14,8 +14,9 @@ from sqlalchemy.orm import Session
 
 from src.constants.enums import QueryStatus
 from src.constants.limits import MAX_STRATA_FILTER
+from src.config.settings import settings
 from src.models.approx_query import ApproxQuery
-from src.services import audit_service, dataset_service, estimation_service, plan_service
+from src.services import audit_service, composition_service, dataset_service, estimation_service, plan_service
 from src.utils.errors import AppError
 from src.utils.timeutil import business_date, local_iso
 
@@ -92,6 +93,10 @@ def run_query(
         ).scalars().all()
         samples[row["code"]] = [float(v) for v in values]
     estimate = estimation_service.ht_estimate(meta, samples, float(plan.confidence_level))
+    # 算法 3：复用同一批共享样本与同一套 HT 方差，合成占比与联合误差边界，不重新抽样
+    composition = composition_service.estimate_composition(
+        estimate, float(plan.confidence_level), settings.min_stratum_sample
+    )
     sample_ms = (time.perf_counter() - started) * 1000.0
 
     truth_started = time.perf_counter()
@@ -145,6 +150,7 @@ def run_query(
             }
             for item in estimate["strata"]
         ],
+        composition=composition,
         sample_ms=round(sample_ms, 2),
         truth_ms=round(truth_ms, 2),
         full_scan_baseline_ms=int(dataset.full_scan_baseline_ms),
@@ -170,6 +176,8 @@ def run_query(
             "rel_error_pct": float(row.rel_error_pct),
             "truth_rel_error_pct": float(row.truth_rel_error_pct),
             "sample_ms": float(row.sample_ms),
+            "composition_publishable": bool(composition["publishable"]),
+            "composition_reasons": list(composition["reasons"]),
             "note": note,
         },
         ip=ip,
@@ -230,6 +238,7 @@ def query_out(db: Session, row: ApproxQuery) -> dict:
         "run_by": row.run_by,
         "created_at": local_iso(row.created_at),
         "strata_detail": detail,
+        "composition": row.composition,
         "qc_id": qc.id if qc else None,
         "qc_verdict": qc.verdict if qc else None,
     }

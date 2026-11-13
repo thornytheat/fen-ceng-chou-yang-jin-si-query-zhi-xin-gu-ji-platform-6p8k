@@ -50,6 +50,23 @@ def _build_checks(db: Session, query, target_pct: float) -> tuple[list[dict], st
     population = sum(int(item.get("population", 0)) for item in strata) or dataset.row_count
     coverage = (query.sample_size / population * 100) if population else 0.0
     speed_ok = float(query.sample_ms) < float(query.full_scan_baseline_ms)
+    composition = query.composition
+
+    if composition and composition.get("publishable"):
+        share_actual = (
+            f"可发布 · {len(composition.get('rows', []))} 条线路，占比合计 "
+            f"{float(composition.get('point_total_pct', 0.0)):.2f}%"
+        )
+        share_ok = True
+        share_note = (
+            f"联合边界 {int(round(float(composition.get('confidence', 0.95)) * 100))}% family-wise"
+            f"（Bonferroni，z={composition.get('z_joint')}），同时覆盖各线路比较"
+        )
+    else:
+        reasons = list(composition.get("reasons", [])) if composition else ["该查询生成于占比功能上线前，没有占比结果，请重跑查询"]
+        share_actual = "拒绝发布" + ("：" + "；".join(reasons) if reasons else "")
+        share_ok = False
+        share_note = "抽样容量不足或占比口径失效时，页面与导出都不得发布线路占比"
 
     checks = [
         {
@@ -91,6 +108,14 @@ def _build_checks(db: Session, query, target_pct: float) -> tuple[list[dict], st
             "threshold": f"< {query.full_scan_baseline_ms} ms",
             "ok": speed_ok,
             "note": "全量基线取数据集上配置的生产扫描耗时",
+        },
+        {
+            "code": CheckCode.SHARE_PUBLISHABLE.value,
+            "label": "线路占比可发布性（联合误差边界）",
+            "actual": share_actual,
+            "threshold": f"每层 n_h ≥ {int(composition.get('min_stratum_sample', 30)) if composition else 30} 行且占比可合成",
+            "ok": share_ok,
+            "note": share_note,
         },
     ]
     blocking = [item for item in checks if item["code"] != CheckCode.COVERAGE.value]

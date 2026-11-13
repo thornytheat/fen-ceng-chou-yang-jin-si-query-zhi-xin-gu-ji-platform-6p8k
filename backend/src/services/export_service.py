@@ -86,7 +86,56 @@ def build_estimate_markdown(query, qc=None) -> tuple[str, str]:
             )
         )
     lines.append("")
-    lines.append("## 4. 精度自检")
+    lines.append("## 4. 线路运费占比与联合误差边界")
+    lines.append("")
+    composition = getattr(query, "composition", None)
+    if composition is None:
+        lines.append("> **本查询生成于占比功能上线前，没有占比结果，不予发布占比口径；请重跑近似查询后再导出。**")
+    elif not composition.get("publishable"):
+        lines.append("> **占比结果拒绝发布（抽样容量不足 / 口径失效），本说明不提供线路占比与误差边界。原因：**")
+        for reason in composition.get("reasons") or ["未提供具体原因"]:
+            lines.append(f"> - {reason}")
+    else:
+        conf_pct = int(round(float(composition.get("confidence", 0.95)) * 100))
+        lines.append(
+            f"占比点估计由同一次抽样的 HT 贡献 `p_h = Ŷ_h / Ŷ` 合成，最大余数法归一，合计恰为 "
+            f"{float(composition['point_total_pct']):.2f}%。"
+        )
+        lines.append("")
+        lines.append(
+            f"误差边界为 **{conf_pct}% family-wise 联合置信区间（Bonferroni，"
+            f"H={composition['family_size']}，z={composition['z_joint']}）**："
+            "同一组区间同时覆盖全部线路的真实占比，可直接用于多条线路之间的比较；"
+            "单线路边缘区间（z="
+            f"{composition['z_marginal']}）仅作参考，不能用于跨线路同时下结论。"
+        )
+        lines.append("")
+        lines.append("| 线路层 | n_h | 占比点估计 | 联合区间下界 | 联合区间上界 | 联合误差半宽 | 单线路边缘半宽（参考） |")
+        lines.append("| --- | ---: | ---: | ---: | ---: | ---: | ---: |")
+        for item in composition["rows"]:
+            lines.append(
+                "| {label}（{code}） | {n:,} | {point:.2f}% | {low:.2f}% | {high:.2f}% | ±{half:.2f} pp | ±{marginal:.2f} pp |".format(
+                    label=item.get("label"),
+                    code=item.get("code"),
+                    n=int(item.get("sample_size", 0)),
+                    point=float(item.get("point_share_pct", 0)),
+                    low=float(item.get("joint_low_pct", 0)),
+                    high=float(item.get("joint_high_pct", 0)),
+                    half=float(item.get("joint_half_pct", 0)),
+                    marginal=float(item.get("marginal_half_pct", 0)),
+                )
+            )
+        lines.append("")
+        lines.append(f"- 占比点估计合计：**{float(composition['point_total_pct']):.2f}%**（归一保证，无负数 / 无超 100%）")
+        lines.append(
+            f"- 发布闸门：每层 n_h ≥ {int(composition['min_stratum_sample'])} 行；"
+            "不达标时本章节直接拒绝发布，页面与自检同步标记为不可发布。"
+        )
+        if composition.get("reasons"):
+            for reason in composition["reasons"]:
+                lines.append(f"- 口径提示：{reason}")
+    lines.append("")
+    lines.append("## 5. 精度自检")
     lines.append("")
     if qc is None:
         lines.append("尚未做精度自检：请先在「精度自检」页对本查询跑一次自检，再导出说明。")
@@ -103,7 +152,7 @@ def build_estimate_markdown(query, qc=None) -> tuple[str, str]:
                 f"{'通过' if item.get('ok') else '不通过'} |"
             )
         lines.append("")
-        lines.append("## 5. 三角色复核链")
+        lines.append("## 6. 三角色复核链")
         lines.append("")
         if not (qc.signoffs or []):
             lines.append("复核链尚未开始（分析师提交 → 负责人复核 → 业务方知悉）。")
@@ -116,10 +165,12 @@ def build_estimate_markdown(query, qc=None) -> tuple[str, str]:
                     + (f"；备注：{entry.get('note')}" if entry.get("note") else "")
                 )
     lines.append("")
-    lines.append("## 6. 口径与复现")
+    lines.append("## 7. 口径与复现")
     lines.append("")
     lines.append("- 样本量：`n = (z·Σ N_h·S_h / (e·Y))²`，`n_h = n·N_h·S_h / Σ N_h·S_h`（Neyman）；S_h 缺失退化为比例分配，每层最小 30 行、超出层容量截断重分配。")
     lines.append("- 估计量：`Ŷ = Σ_h N_h·ȳ_h`；方差 `V = Σ_h N_h²·(1 - n_h/N_h)·s_h²/n_h`（有限总体校正）；`CI = Ŷ ± z·√V`。")
+    lines.append("- 线路占比：`p_h = Ŷ_h / Ŷ`，最大余数法归一到合计 100.00%；占比方差由 Delta 方法在同一批样本的 HT 方差上线性化得到，联合区间用 Bonferroni 分位 `z(1-α/(2H))`，family-wise 同时覆盖各线路比较；区间裁剪到 [0,100] 并显式标注。")
+    lines.append("- 发布闸门：任一层 `n_h < 30`（含 0/1 条无法估计方差）或总额非正时，占比结果拒绝发布，页面、自检、导出三处口径一致。")
     lines.append("- 抽样实现：明细行 seed 时写入确定性 `sample_rank`，查询按每层最小 rank 取 n_h 行，同样输入永远同样样本，可复现。")
     lines.append("- 全量真值：同一数据集、同一过滤范围的 `SUM(value_minor)` 真实全表聚合，不是写死的对照值。")
     lines.append("")

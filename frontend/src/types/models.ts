@@ -103,6 +103,33 @@ export interface StratumContribution {
   verified: boolean;
 }
 
+export interface CompositionRow {
+  code: string;
+  label: string;
+  sample_size: number;
+  point_share_pct: number;
+  point_share_raw_pct: number;
+  std_error_pct: number;
+  marginal_half_pct: number;
+  joint_half_pct: number;
+  joint_low_pct: number;
+  joint_high_pct: number;
+  interval_clipped: boolean;
+}
+
+export interface Composition {
+  publishable: boolean;
+  confidence: number;
+  family_size: number;
+  z_marginal: number;
+  z_joint: number;
+  method: string;
+  min_stratum_sample: number;
+  point_total_pct: number;
+  rows: CompositionRow[];
+  reasons: string[];
+}
+
 export interface ApproxQuery {
   id: number;
   code: string;
@@ -130,6 +157,7 @@ export interface ApproxQuery {
   run_by: string;
   created_at: string;
   strata_detail: StratumContribution[];
+  composition: Composition | null;
   qc_id: number | null;
   qc_verdict: string | null;
 }

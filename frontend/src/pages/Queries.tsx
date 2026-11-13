@@ -13,6 +13,7 @@ import { can } from '../constants/roles';
 import StatTile from '../components/common/StatTile';
 import RangeBar from '../components/common/RangeBar';
 import CiPlot from '../components/common/CiPlot';
+import CompositionPanel from '../components/common/CompositionPanel';
 import RulerBar from '../components/common/RulerBar';
 import VerdictPill from '../components/common/VerdictPill';
 import EmptyState from '../components/common/EmptyState';
@@ -271,6 +272,8 @@ export default function Queries() {
               <RulerBar value={selected.rel_error_pct} target={target} caption="本次 95% CI 半宽 vs 数据集精度标准" />
 
               <CiPlot rows={ciRows} unit={unit} scale={scale} caption="各层贡献与 95% CI（层内方差分摊）" />
+
+              <CompositionPanel composition={selected.composition} />
 
               <div className="table-wrap">
                 <table className="data-table">

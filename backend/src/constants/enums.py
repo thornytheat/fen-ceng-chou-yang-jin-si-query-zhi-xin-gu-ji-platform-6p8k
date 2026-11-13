@@ -53,6 +53,7 @@ class CheckCode(StrEnum):
     MIN_STRATUM = "min_stratum_sample"
     COVERAGE = "sampling_coverage"
     SPEED = "speed_vs_full_scan"
+    SHARE_PUBLISHABLE = "share_publishable"
 
 
 PLAN_STATUS_LABELS: dict[str, str] = {
